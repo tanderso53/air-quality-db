@@ -68,7 +68,8 @@ struct app {
 	const char **argv;
 	char addr[48];
 	char port[10];
-	char data[8192];
+	char data[10240];
+	char name[32];
 } local_app;
 
 int app_tcp_connect(struct app *a);
@@ -123,9 +124,15 @@ int app_tcp_connect(struct app *a)
 
 int app_parse_args(struct app *a)
 {
-	if (a->argc != 3) {
-		fprintf(stderr, "Bad argument count %d, 2 expected\n",
-			a->argc - 1);
+	if (a->argc == 4) {
+		memset(a->name, '\0', sizeof(a->name));
+		strncpy(a->name, a->argv[3], sizeof(a->name) - 1);
+	} else if (a->argc != 3) {
+		fprintf(stderr, "Bad argument count %d, "
+			"2 or 3 expected\n", a->argc - 1);
+		return -1;
+	} else {
+		strcpy(a->name, "default");
 	}
 
 	strncpy(a->addr, a->argv[1], sizeof(a->addr) - 1);
@@ -181,7 +188,7 @@ int app_close_file(struct app *a)
 
 int app_print_data(struct app *a)
 {
-	printf("%s\n", a->data);
+	printf("%s\t%s\n", a->data, a->name);
 
 	return 0;
 }

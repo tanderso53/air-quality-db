@@ -16,9 +16,12 @@ sqldb=${sqldb:-air-quality}
 sqlhost=${sqlhost:-localhost}
 sqldir=${sqldir:-./sql}
 tmpdir=${tmpdir:-/tmp}
+devname=${devname:-default}
 
 ## Internal variables
-tmpfileroot=air-quality-data.json
+randostuff=$(head -c 128 /dev/random | strings -n1 | tr -dc '[:alnum:]_' | head -c 8)-$(date '+%Y%m%d')
+tmpfileroot=air-quality-data-${randostuff}.json
+tmpfile=${tmpdir}/${tmpfileroot}
 sqlupdate=round-robin-update.sql
 exitreq=0
 
@@ -31,7 +34,7 @@ signal_handler() {
 trap signal_handler SIGINT
 
 while true; do
-    ${app} ${ip} ${port} > ${tmpdir}/${tmpfileroot}
+    ${app} ${ip} ${port} ${devname} > ${tmpdir}/${tmpfileroot}
 
     if [ $? -lt 0 ]; then
 	exit -1
@@ -41,7 +44,8 @@ while true; do
 	exit 0
     fi
 
-    if [ -s ${tmpdir}/${tmpfileroot} ]; then
-	cat ${sqldir}/${sqlupdate} | psql -U ${sqlrole} -h ${sqlhost} -d ${sqldb}
+    if [ -s ${tmpfile} ]; then
+	cat ${tmpfile} | psql -U ${sqlrole} -h ${sqlhost} -d ${sqldb} -f ${sqldir}/${sqlupdate}
+	rm ${tmpfile}
     fi
 done
